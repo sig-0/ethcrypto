@@ -7,7 +7,9 @@ import (
 
 type gfP [4]uint64
 
-func newGFp(x int64) (out *gfP) {
+func newGFp(x int64) *gfP {
+	var out *gfP
+
 	if x >= 0 {
 		out = &gfP{uint64(x)}
 	} else {
@@ -16,6 +18,7 @@ func newGFp(x int64) (out *gfP) {
 	}
 
 	montEncode(out, out)
+
 	return out
 }
 
@@ -42,6 +45,7 @@ func (e *gfP) Invert(f *gfP) {
 			if (bits[word]>>bit)&1 == 1 {
 				gfpMul(sum, sum, power)
 			}
+
 			gfpMul(power, power, power)
 		}
 	}
@@ -71,10 +75,12 @@ func (e *gfP) Unmarshal(in []byte) error {
 		if e[i] < p2[i] {
 			return nil
 		}
+
 		if e[i] > p2[i] {
 			return errors.New("bn256: coordinate exceeds modulus")
 		}
 	}
+
 	return errors.New("bn256: coordinate equals modulus")
 }
 

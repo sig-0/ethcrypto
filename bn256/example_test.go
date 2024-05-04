@@ -12,14 +12,21 @@ import (
 )
 
 func TestExamplePair(t *testing.T) {
+	t.Parallel()
+
 	// This implements the tripartite Diffie-Hellman algorithm from "A One
 	// Round Protocol for Tripartite Diffie-Hellman", A. Joux.
 	// http://www.springerlink.com/content/cddc57yyva0hburb/fulltext.pdf
-
+	//
 	// Each of three parties, a, b and c, generate a private value.
-	a, _ := rand.Int(rand.Reader, Order)
-	b, _ := rand.Int(rand.Reader, Order)
-	c, _ := rand.Int(rand.Reader, Order)
+	a, err := rand.Int(rand.Reader, Order)
+	require.NoError(t, err)
+
+	b, err := rand.Int(rand.Reader, Order)
+	require.NoError(t, err)
+
+	c, err := rand.Int(rand.Reader, Order)
+	require.NoError(t, err)
 
 	// Then each party calculates g₁ and g₂ times their private value.
 	pa := new(G1).ScalarBaseMult(a)
@@ -47,5 +54,5 @@ func TestExamplePair(t *testing.T) {
 	require.Equal(t, k1, k2)
 	require.Equal(t, k1, k3)
 
-	require.Equal(t, len(np), 4) //Avoid gometalinter varcheck err on np
+	require.Equal(t, len(np), 4) // Avoid gometalinter varcheck err on np
 }

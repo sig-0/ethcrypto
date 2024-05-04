@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sys/cpu"
 )
 
-//nolint:varcheck,unused,deadcode
+//nolint:varcheck,unused,deadcode // Leaving this for whatever reason
 var hasBMI2 = cpu.X86.HasBMI2
 
 //go:noescape

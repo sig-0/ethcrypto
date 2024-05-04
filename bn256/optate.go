@@ -1,6 +1,6 @@
 package bn256
 
-func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (a, b, c *gfP2, rOut *twistPoint) {
+func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (*gfP2, *gfP2, *gfP2, *twistPoint) {
 	// See the mixed addition algorithm from "Faster Computation of the
 	// Tate Pairing", http://arxiv.org/pdf/0904.0854v3.pdf
 	B := (&gfP2{}).Mul(&p.x, &r.t)
@@ -21,7 +21,7 @@ func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (a, b, c *gfP2, 
 
 	V := (&gfP2{}).Mul(&r.x, E)
 
-	rOut = &twistPoint{}
+	rOut := &twistPoint{}
 	rOut.x.Square(L1).Sub(&rOut.x, J).Sub(&rOut.x, V).Sub(&rOut.x, V)
 
 	rOut.z.Add(&r.z, H).Square(&rOut.z).Sub(&rOut.z, &r.t).Sub(&rOut.z, I)
@@ -38,18 +38,18 @@ func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (a, b, c *gfP2, 
 
 	t2.Mul(L1, &p.x)
 	t2.Add(t2, t2)
-	a = (&gfP2{}).Sub(t2, t)
+	a := (&gfP2{}).Sub(t2, t)
 
-	c = (&gfP2{}).MulScalar(&rOut.z, &q.y)
+	c := (&gfP2{}).MulScalar(&rOut.z, &q.y)
 	c.Add(c, c)
 
-	b = (&gfP2{}).Neg(L1)
+	b := (&gfP2{}).Neg(L1)
 	b.MulScalar(b, &q.x).Add(b, b)
 
-	return
+	return a, b, c, rOut
 }
 
-func lineFunctionDouble(r *twistPoint, q *curvePoint) (a, b, c *gfP2, rOut *twistPoint) {
+func lineFunctionDouble(r *twistPoint, q *curvePoint) (*gfP2, *gfP2, *gfP2, *twistPoint) {
 	// See the doubling algorithm for a=0 from "Faster Computation of the
 	// Tate Pairing", http://arxiv.org/pdf/0904.0854v3.pdf
 	A := (&gfP2{}).Square(&r.x)
@@ -64,31 +64,32 @@ func lineFunctionDouble(r *twistPoint, q *curvePoint) (a, b, c *gfP2, rOut *twis
 
 	G := (&gfP2{}).Square(E)
 
-	rOut = &twistPoint{}
+	rOut := &twistPoint{}
 	rOut.x.Sub(G, D).Sub(&rOut.x, D)
 
 	rOut.z.Add(&r.y, &r.z).Square(&rOut.z).Sub(&rOut.z, B).Sub(&rOut.z, &r.t)
-
 	rOut.y.Sub(D, &rOut.x).Mul(&rOut.y, E)
+
 	t := (&gfP2{}).Add(C, C)
+
 	t.Add(t, t).Add(t, t)
 	rOut.y.Sub(&rOut.y, t)
 
 	rOut.t.Square(&rOut.z)
 
 	t.Mul(E, &r.t).Add(t, t)
-	b = (&gfP2{}).Neg(t)
+	b := (&gfP2{}).Neg(t)
 	b.MulScalar(b, &q.x)
 
-	a = (&gfP2{}).Add(&r.x, E)
+	a := (&gfP2{}).Add(&r.x, E)
 	a.Square(a).Sub(a, A).Sub(a, G)
 	t.Add(B, B).Add(t, t)
 	a.Sub(a, t)
 
-	c = (&gfP2{}).Mul(&rOut.z, &r.t)
+	c := (&gfP2{}).Mul(&rOut.z, &r.t)
 	c.Add(c, c).MulScalar(c, &q.y)
 
-	return
+	return a, b, c, rOut
 }
 
 func mulLine(ret *gfP12, a, b, c *gfP2) {
@@ -112,10 +113,12 @@ func mulLine(ret *gfP12, a, b, c *gfP2) {
 }
 
 // sixuPlus2NAF is 6u+2 in non-adjacent form.
-var sixuPlus2NAF = []int8{0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0,
+var sixuPlus2NAF = []int8{
+	0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0,
 	0, 1, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 1,
 	1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 1,
-	1, 0, 0, -1, 0, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, 1, 1}
+	1, 0, 0, -1, 0, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, 1, 1,
+}
 
 // miller implements the Miller loop for calculating the Optimal Ate pairing.
 // See algorithm 1 from http://cryptojedi.org/papers/dclxvi-20100714.pdf
@@ -140,11 +143,13 @@ func miller(q *twistPoint, p *curvePoint) *gfP12 {
 
 	for i := len(sixuPlus2NAF) - 1; i > 0; i-- {
 		a, b, c, newR := lineFunctionDouble(r, bAffine)
+
 		if i != len(sixuPlus2NAF)-1 {
 			ret.Square(ret)
 		}
 
 		mulLine(ret, a, b, c)
+
 		r = newR
 
 		switch sixuPlus2NAF[i-1] {
@@ -157,6 +162,7 @@ func miller(q *twistPoint, p *curvePoint) *gfP12 {
 		}
 
 		mulLine(ret, a, b, c)
+
 		r = newR
 	}
 
@@ -196,6 +202,7 @@ func miller(q *twistPoint, p *curvePoint) *gfP12 {
 	r2.Square(&q1.y)
 	a, b, c, newR := lineFunctionAdd(r, q1, bAffine, r2)
 	mulLine(ret, a, b, c)
+
 	r = newR
 
 	r2.Square(&minusQ2.y)
@@ -240,7 +247,9 @@ func finalExponentiation(in *gfP12) *gfP12 {
 
 	y1 := (&gfP12{}).Conjugate(t1)
 	y5 := (&gfP12{}).Conjugate(fu2)
+
 	y3.Conjugate(y3)
+
 	y4 := (&gfP12{}).Mul(fu, fu2p)
 	y4.Conjugate(y4)
 
@@ -266,5 +275,6 @@ func optimalAte(a *twistPoint, b *curvePoint) *gfP12 {
 	if a.IsInfinity() || b.IsInfinity() {
 		ret.SetOne()
 	}
+
 	return ret
 }

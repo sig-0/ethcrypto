@@ -22,9 +22,12 @@ var curveGen = &curvePoint{
 
 func (c *curvePoint) String() string {
 	c.MakeAffine()
+
 	x, y := &gfP{}, &gfP{}
+
 	montDecode(x, &c.x)
 	montDecode(y, &c.y)
+
 	return "(" + x.String() + ", " + y.String() + ")"
 }
 
@@ -38,11 +41,13 @@ func (c *curvePoint) Set(a *curvePoint) {
 // IsOnCurve returns true iff c is on the curve.
 func (c *curvePoint) IsOnCurve() bool {
 	c.MakeAffine()
+
 	if c.IsInfinity() {
 		return true
 	}
 
 	y2, x3 := &gfP{}, &gfP{}
+
 	gfpMul(y2, &c.y, &c.y)
 	gfpMul(x3, &c.x, &c.x)
 	gfpMul(x3, x3, &c.x)
@@ -65,10 +70,13 @@ func (c *curvePoint) IsInfinity() bool {
 func (c *curvePoint) Add(a, b *curvePoint) {
 	if a.IsInfinity() {
 		c.Set(b)
+
 		return
 	}
+
 	if b.IsInfinity() {
 		c.Set(a)
+
 		return
 	}
 
@@ -90,6 +98,7 @@ func (c *curvePoint) Add(a, b *curvePoint) {
 	gfpMul(s1, &a.y, t)
 
 	s2 := &gfP{}
+
 	gfpMul(t, &a.z, z12)
 	gfpMul(s2, &b.y, t)
 
@@ -114,10 +123,13 @@ func (c *curvePoint) Add(a, b *curvePoint) {
 
 	gfpSub(t, s2, s1)
 	yEqual := *t == gfP{0}
+
 	if xEqual && yEqual {
 		c.Double(a)
+
 		return
 	}
+
 	r := &gfP{}
 	gfpAdd(r, t, t)
 
@@ -193,10 +205,12 @@ func (c *curvePoint) Mul(a *curvePoint, scalar *big.Int) {
 
 	sum := &curvePoint{}
 	sum.SetInfinity()
+
 	t := &curvePoint{}
 
 	for i := len(multiScalar) - 1; i >= 0; i-- {
 		t.Double(sum)
+
 		if multiScalar[i] == 0 {
 			sum.Set(t)
 		} else {
@@ -214,6 +228,7 @@ func (c *curvePoint) MakeAffine() {
 		c.x = gfP{0}
 		c.y = *newGFp(1)
 		c.t = gfP{0}
+
 		return
 	}
 

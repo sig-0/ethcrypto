@@ -8,8 +8,14 @@ var half = new(big.Int).Rsh(Order, 1)
 
 var curveLattice = &lattice{
 	vectors: [][]*big.Int{
-		{bigFromBase10("147946756881789319000765030803803410728"), bigFromBase10("147946756881789319010696353538189108491")},
-		{bigFromBase10("147946756881789319020627676272574806254"), bigFromBase10("-147946756881789318990833708069417712965")},
+		{
+			bigFromBase10("147946756881789319000765030803803410728"),
+			bigFromBase10("147946756881789319010696353538189108491"),
+		},
+		{
+			bigFromBase10("147946756881789319020627676272574806254"),
+			bigFromBase10("-147946756881789318990833708069417712965"),
+		},
 	},
 	inverse: []*big.Int{
 		bigFromBase10("147946756881789318990833708069417712965"),
@@ -20,10 +26,30 @@ var curveLattice = &lattice{
 
 var targetLattice = &lattice{
 	vectors: [][]*big.Int{
-		{bigFromBase10("9931322734385697761"), bigFromBase10("9931322734385697761"), bigFromBase10("9931322734385697763"), bigFromBase10("9931322734385697764")},
-		{bigFromBase10("4965661367192848881"), bigFromBase10("4965661367192848881"), bigFromBase10("4965661367192848882"), bigFromBase10("-9931322734385697762")},
-		{bigFromBase10("-9931322734385697762"), bigFromBase10("-4965661367192848881"), bigFromBase10("4965661367192848881"), bigFromBase10("-4965661367192848882")},
-		{bigFromBase10("9931322734385697763"), bigFromBase10("-4965661367192848881"), bigFromBase10("-4965661367192848881"), bigFromBase10("-4965661367192848881")},
+		{
+			bigFromBase10("9931322734385697761"),
+			bigFromBase10("9931322734385697761"),
+			bigFromBase10("9931322734385697763"),
+			bigFromBase10("9931322734385697764"),
+		},
+		{
+			bigFromBase10("4965661367192848881"),
+			bigFromBase10("4965661367192848881"),
+			bigFromBase10("4965661367192848882"),
+			bigFromBase10("-9931322734385697762"),
+		},
+		{
+			bigFromBase10("-9931322734385697762"),
+			bigFromBase10("-4965661367192848881"),
+			bigFromBase10("4965661367192848881"),
+			bigFromBase10("-4965661367192848882"),
+		},
+		{
+			bigFromBase10("9931322734385697763"),
+			bigFromBase10("-4965661367192848881"),
+			bigFromBase10("-4965661367192848881"),
+			bigFromBase10("-4965661367192848881"),
+		},
 	},
 	inverse: []*big.Int{
 		bigFromBase10("734653495049373973658254490726798021314063399421879442165"),
@@ -35,9 +61,9 @@ var targetLattice = &lattice{
 }
 
 type lattice struct {
+	det     *big.Int
 	vectors [][]*big.Int
 	inverse []*big.Int
-	det     *big.Int
 }
 
 // decompose takes a scalar mod Order as input and finds a short, positive decomposition of it wrt to the lattice basis.
@@ -95,6 +121,7 @@ func (l *lattice) Multi(scalar *big.Int) []uint8 {
 	}
 
 	out := make([]uint8, maxLen)
+
 	for j, x := range decomp {
 		for i := 0; i < maxLen; i++ {
 			out[i] += uint8(x.Bit(i)) << uint(j)

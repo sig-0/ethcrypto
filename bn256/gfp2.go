@@ -14,6 +14,7 @@ func gfP2Decode(in *gfP2) *gfP2 {
 	out := &gfP2{}
 	montDecode(&out.x, &in.x)
 	montDecode(&out.y, &in.y)
+
 	return out
 }
 
@@ -24,52 +25,61 @@ func (e *gfP2) String() string {
 func (e *gfP2) Set(a *gfP2) *gfP2 {
 	e.x.Set(&a.x)
 	e.y.Set(&a.y)
+
 	return e
 }
 
 func (e *gfP2) SetZero() *gfP2 {
 	e.x = gfP{0}
 	e.y = gfP{0}
+
 	return e
 }
 
 func (e *gfP2) SetOne() *gfP2 {
 	e.x = gfP{0}
 	e.y = *newGFp(1)
+
 	return e
 }
 
 func (e *gfP2) IsZero() bool {
 	zero := gfP{0}
+
 	return e.x == zero && e.y == zero
 }
 
 func (e *gfP2) IsOne() bool {
 	zero, one := gfP{0}, *newGFp(1)
+
 	return e.x == zero && e.y == one
 }
 
 func (e *gfP2) Conjugate(a *gfP2) *gfP2 {
 	e.y.Set(&a.y)
 	gfpNeg(&e.x, &a.x)
+
 	return e
 }
 
 func (e *gfP2) Neg(a *gfP2) *gfP2 {
 	gfpNeg(&e.x, &a.x)
 	gfpNeg(&e.y, &a.y)
+
 	return e
 }
 
 func (e *gfP2) Add(a, b *gfP2) *gfP2 {
 	gfpAdd(&e.x, &a.x, &b.x)
 	gfpAdd(&e.y, &a.y, &b.y)
+
 	return e
 }
 
 func (e *gfP2) Sub(a, b *gfP2) *gfP2 {
 	gfpSub(&e.x, &a.x, &b.x)
 	gfpSub(&e.y, &a.y, &b.y)
+
 	return e
 }
 
@@ -88,12 +98,14 @@ func (e *gfP2) Mul(a, b *gfP2) *gfP2 {
 
 	e.x.Set(tx)
 	e.y.Set(ty)
+
 	return e
 }
 
 func (e *gfP2) MulScalar(a *gfP2, b *gfP) *gfP2 {
 	gfpMul(&e.x, &a.x, b)
 	gfpMul(&e.y, &a.y, b)
+
 	return e
 }
 
@@ -118,6 +130,7 @@ func (e *gfP2) MulXi(a *gfP2) *gfP2 {
 
 	e.x.Set(tx)
 	e.y.Set(ty)
+
 	return e
 }
 
@@ -134,6 +147,7 @@ func (e *gfP2) Square(a *gfP2) *gfP2 {
 
 	e.x.Set(tx)
 	e.y.Set(ty)
+
 	return e
 }
 
@@ -152,5 +166,6 @@ func (e *gfP2) Invert(a *gfP2) *gfP2 {
 
 	gfpMul(&e.x, t1, inv)
 	gfpMul(&e.y, &a.y, inv)
+
 	return e
 }
