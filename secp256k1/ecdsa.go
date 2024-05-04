@@ -56,9 +56,6 @@ func ECRecover(data []byte) ([]byte, error) {
 		return nil, ErrInvalidSValue
 	}
 
-	// Calculate the v term
-	vTerm -= 27
-
 	// Recover the public key
 	publicKey, err := secp256k1Recover(
 		r.Bytes32(),
@@ -88,14 +85,16 @@ func secp256k1Recover(
 	// The signature is always 65B long
 	signature := make([]byte, 65)
 
+	// Set the V value as the first byte
+	// (the crypto lib used expects this for recovery)
+	// [v, r, s]
+	signature[0] = vByte
+
 	// Copy the R value
-	copy(signature[0:32], rBytes[:])
+	copy(signature[1:33], rBytes[:])
 
 	// Copy the S value
-	copy(signature[32:64], sBytes[:])
-
-	// Set the V value
-	signature[64] = vByte
+	copy(signature[33:65], sBytes[:])
 
 	// Recover the actual public key
 	pubKey, _, err := ecdsa.RecoverCompact(signature, messageHash)
