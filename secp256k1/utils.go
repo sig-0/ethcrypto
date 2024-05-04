@@ -1,4 +1,4 @@
-package ethcrypto
+package secp256k1
 
 import "golang.org/x/crypto/sha3"
 
