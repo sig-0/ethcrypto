@@ -15,7 +15,7 @@ var curveB = newGFp(3)
 // curveGen is the generator of G₁.
 var curveGen = &curvePoint{
 	x: *newGFp(1),
-	y: *newGFp(-2),
+	y: *newGFp(2),
 	z: *newGFp(1),
 	t: *newGFp(1),
 }
@@ -183,7 +183,7 @@ func (c *curvePoint) Double(a *curvePoint) {
 }
 
 func (c *curvePoint) Mul(a *curvePoint, scalar *big.Int) {
-	precomp := [1 << 2]*curvePoint{nil, &curvePoint{}, &curvePoint{}, &curvePoint{}}
+	precomp := [1 << 2]*curvePoint{nil, {}, {}, {}}
 	precomp[1].Set(a)
 	precomp[2].Set(a)
 	gfpMul(&precomp[2].x, &precomp[2].x, xiTo2PSquaredMinus2Over3)

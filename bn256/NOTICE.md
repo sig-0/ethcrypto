@@ -18,3 +18,9 @@ From the `master` branch on the [`cloudflare/bn256`](https://github.com/cloudfla
 - https://github.com/cloudflare/bn256/commit/806123b6159942fb53397cbb3fbf58067ddc8ba6
 - https://github.com/cloudflare/bn256/commit/9bd9f73a0273ed2f42707ed13b3e36d38baa2a49
 - https://github.com/cloudflare/bn256/commit/66a4f6353b47b94f61ac466b3f21b28adb76ae29
+
+From
+the [`go-ethereum/crypto/bn256/cloudflare`](https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256/cloudflare)
+package, changes relating to [EIP-196](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-196.md)
+and [EIP-197](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-197.md), which change specific params
+of the library, making it incompatible with the original paper.
