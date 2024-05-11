@@ -9,18 +9,22 @@ import (
 	"hash"
 )
 
+//nolint:gochecknoinits // Necessary evil
 func init() {
 	newHash256 := func() hash.Hash {
-		h, _ := New256(nil)
+		h, _ := New256(nil) //nolint:errcheck // Ignoring check
+
 		return h
 	}
 	newHash384 := func() hash.Hash {
-		h, _ := New384(nil)
+		h, _ := New384(nil) //nolint:errcheck // Ignoring check
+
 		return h
 	}
 
 	newHash512 := func() hash.Hash {
-		h, _ := New512(nil)
+		h, _ := New512(nil) //nolint:errcheck // Ignoring check
+
 		return h
 	}
 

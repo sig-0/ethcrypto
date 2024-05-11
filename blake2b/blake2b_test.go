@@ -8,13 +8,18 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestHashes(t *testing.T) {
+	t.Parallel()
+
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
@@ -22,23 +27,31 @@ func TestHashes(t *testing.T) {
 	if useAVX2 {
 		t.Log("AVX2 version")
 		testHashes(t)
+
 		useAVX2 = false
 	}
+
 	if useAVX {
 		t.Log("AVX version")
 		testHashes(t)
+
 		useAVX = false
 	}
+
 	if useSSE4 {
 		t.Log("SSE4 version")
 		testHashes(t)
+
 		useSSE4 = false
 	}
+
 	t.Log("generic version")
 	testHashes(t)
 }
 
 func TestHashes2X(t *testing.T) {
+	t.Parallel()
+
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
@@ -46,50 +59,62 @@ func TestHashes2X(t *testing.T) {
 	if useAVX2 {
 		t.Log("AVX2 version")
 		testHashes2X(t)
+
 		useAVX2 = false
 	}
+
 	if useAVX {
 		t.Log("AVX version")
 		testHashes2X(t)
+
 		useAVX = false
 	}
+
 	if useSSE4 {
 		t.Log("SSE4 version")
 		testHashes2X(t)
+
 		useSSE4 = false
 	}
+
 	t.Log("generic version")
 	testHashes2X(t)
 }
 
 func TestMarshal(t *testing.T) {
+	t.Parallel()
+
 	input := make([]byte, 255)
 	for i := range input {
 		input[i] = byte(i)
 	}
+
 	for _, size := range []int{Size, Size256, Size384, 12, 25, 63} {
 		for i := 0; i < 256; i++ {
 			h, err := New(size, nil)
 			if err != nil {
 				t.Fatalf("size=%d, len(input)=%d: error from New(%v, nil): %v", size, i, size, err)
 			}
+
 			h2, err := New(size, nil)
 			if err != nil {
 				t.Fatalf("size=%d, len(input)=%d: error from New(%v, nil): %v", size, i, size, err)
 			}
 
 			h.Write(input[:i/2])
+
 			halfstate, err := h.(encoding.BinaryMarshaler).MarshalBinary()
 			if err != nil {
 				t.Fatalf("size=%d, len(input)=%d: could not marshal: %v", size, i, err)
 			}
-			err = h2.(encoding.BinaryUnmarshaler).UnmarshalBinary(halfstate)
-			if err != nil {
+
+			if err = h2.(encoding.BinaryUnmarshaler).UnmarshalBinary(halfstate); err != nil {
 				t.Fatalf("size=%d, len(input)=%d: could not unmarshal: %v", size, i, err)
 			}
 
 			h.Write(input[i/2 : i])
 			sum := h.Sum(nil)
+
 			h2.Write(input[i/2 : i])
 			sum2 := h2.Sum(nil)
 
@@ -101,8 +126,10 @@ func TestMarshal(t *testing.T) {
 			if err != nil {
 				t.Fatalf("size=%d, len(input)=%d: error from New(%v, nil): %v", size, i, size, err)
 			}
+
 			h3.Write(input[:i])
 			sum3 := h3.Sum(nil)
+
 			if !bytes.Equal(sum, sum3) {
 				t.Fatalf("size=%d, len(input)=%d: sum = %v, want %v", size, i, sum, sum3)
 			}
@@ -111,7 +138,10 @@ func TestMarshal(t *testing.T) {
 }
 
 func testHashes(t *testing.T) {
-	key, _ := hex.DecodeString("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f")
+	t.Helper()
+
+	key, err := hex.DecodeString("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f")
+	require.NoError(t, err)
 
 	input := make([]byte, 255)
 	for i := range input {
@@ -132,6 +162,7 @@ func testHashes(t *testing.T) {
 		}
 
 		h.Reset()
+
 		for j := 0; j < i; j++ {
 			h.Write(input[j : j+1])
 		}
@@ -144,7 +175,10 @@ func testHashes(t *testing.T) {
 }
 
 func testHashes2X(t *testing.T) {
-	key, _ := hex.DecodeString("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f")
+	t.Helper()
+
+	key, err := hex.DecodeString("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f")
+	require.NoError(t, err)
 
 	input := make([]byte, 256)
 	for i := range input {
@@ -155,34 +189,42 @@ func testHashes2X(t *testing.T) {
 		length := uint32(len(expectedHex) / 2)
 		sum := make([]byte, int(length))
 
-		h, err := NewXOF(length, key)
-		if err != nil {
-			t.Fatalf("#%d: error from NewXOF: %v", i, err)
+		h, xofErr := NewXOF(length, key)
+		if xofErr != nil {
+			t.Fatalf("#%d: error from NewXOF: %v", i, xofErr)
 		}
 
-		if _, err := h.Write(input); err != nil {
-			t.Fatalf("#%d (single write): error from Write: %v", i, err)
+		if _, writeErr := h.Write(input); writeErr != nil {
+			t.Fatalf("#%d (single write): error from Write: %v", i, writeErr)
 		}
-		if _, err := h.Read(sum); err != nil {
-			t.Fatalf("#%d (single write): error from Read: %v", i, err)
+
+		if _, readErr := h.Read(sum); readErr != nil {
+			t.Fatalf("#%d (single write): error from Read: %v", i, readErr)
 		}
-		if n, err := h.Read(sum); n != 0 || err != io.EOF {
-			t.Fatalf("#%d (single write): Read did not return (0, io.EOF) after exhaustion, got (%v, %v)", i, n, err)
+
+		if n, readErr := h.Read(sum); n != 0 || !errors.Is(readErr, io.EOF) {
+			t.Fatalf("#%d (single write): Read did not return (0, io.EOF) after exhaustion, got (%v, %v)", i, n, readErr)
 		}
+
 		if gotHex := fmt.Sprintf("%x", sum); gotHex != expectedHex {
 			t.Fatalf("#%d (single write): got %s, wanted %s", i, gotHex, expectedHex)
 		}
 
 		h.Reset()
+
 		for j := 0; j < len(input); j++ {
-			h.Write(input[j : j+1])
-		}
-		for j := 0; j < len(sum); j++ {
-			h = h.Clone()
-			if _, err := h.Read(sum[j : j+1]); err != nil {
-				t.Fatalf("#%d (byte-by-byte) - Read %d: error from Read: %v", i, j, err)
+			if _, writeErr := h.Write(input[j : j+1]); writeErr != nil {
+				t.Fatal(writeErr)
 			}
 		}
+
+		for j := 0; j < len(sum); j++ {
+			h = h.Clone()
+			if _, readErr := h.Read(sum[j : j+1]); readErr != nil {
+				t.Fatalf("#%d (byte-by-byte) - Read %d: error from Read: %v", i, j, readErr)
+			}
+		}
+
 		if gotHex := fmt.Sprintf("%x", sum); gotHex != expectedHex {
 			t.Fatalf("#%d (byte-by-byte): got %s, wanted %s", i, gotHex, expectedHex)
 		}
@@ -192,6 +234,7 @@ func testHashes2X(t *testing.T) {
 	if err != nil {
 		t.Fatalf("#unknown length: error from NewXOF: %v", err)
 	}
+
 	if _, err := h.Write(input); err != nil {
 		t.Fatalf("#unknown length: error from Write: %v", err)
 	}
@@ -219,39 +262,55 @@ func generateSequence(out []byte, seed uint32) {
 	}
 }
 
-func computeMAC(msg []byte, hashSize int, key []byte) (sum []byte) {
-	var h hash.Hash
+func computeMAC(t *testing.T, msg []byte, hashSize int, key []byte) []byte {
+	t.Helper()
+
+	var (
+		h   hash.Hash
+		err error
+	)
+
 	switch hashSize {
 	case Size:
-		h, _ = New512(key)
+		h, err = New512(key)
+		require.NoError(t, err)
 	case Size384:
-		h, _ = New384(key)
+		h, err = New384(key)
+		require.NoError(t, err)
 	case Size256:
-		h, _ = New256(key)
+		h, err = New256(key)
+		require.NoError(t, err)
 	case 20:
-		h, _ = newDigest(20, key)
+		h, err = newDigest(20, key)
+		require.NoError(t, err)
 	default:
 		panic("unexpected hashSize")
 	}
 
 	h.Write(msg)
-	return h.Sum(sum)
+
+	return h.Sum(nil)
 }
 
-func computeHash(msg []byte, hashSize int) (sum []byte) {
+func computeHash(msg []byte, hashSize int) []byte {
 	switch hashSize {
 	case Size:
 		hash := Sum512(msg)
+
 		return hash[:]
 	case Size384:
 		hash := Sum384(msg)
+
 		return hash[:]
 	case Size256:
 		hash := Sum256(msg)
+
 		return hash[:]
 	case 20:
 		var hash [64]byte
+
 		checkSum(&hash, 20, msg)
+
 		return hash[:20]
 	default:
 		panic("unexpected hashSize")
@@ -260,13 +319,17 @@ func computeHash(msg []byte, hashSize int) (sum []byte) {
 
 // Test function from RFC 7693.
 func TestSelfTest(t *testing.T) {
+	t.Parallel()
+
 	hashLens := [4]int{20, 32, 48, 64}
 	msgLens := [6]int{0, 3, 128, 129, 255, 1024}
 
 	msg := make([]byte, 1024)
 	key := make([]byte, 64)
 
-	h, _ := New256(nil)
+	h, err := New256(nil)
+	require.NoError(t, err)
+
 	for _, hashSize := range hashLens {
 		for _, msgLength := range msgLens {
 			generateSequence(msg[:msgLength], uint32(msgLength)) // unkeyed hash
@@ -274,8 +337,8 @@ func TestSelfTest(t *testing.T) {
 			md := computeHash(msg[:msgLength], hashSize)
 			h.Write(md)
 
-			generateSequence(key[:], uint32(hashSize)) // keyed hash
-			md = computeMAC(msg[:msgLength], hashSize, key[:hashSize])
+			generateSequence(key, uint32(hashSize)) // keyed hash
+			md = computeMAC(t, msg[:msgLength], hashSize, key[:hashSize])
 			h.Write(md)
 		}
 	}
@@ -287,6 +350,7 @@ func TestSelfTest(t *testing.T) {
 		0x03, 0xd7, 0x63, 0xb8, 0xbb, 0xad, 0x2e, 0x73,
 		0x7f, 0x5e, 0x76, 0x5a, 0x7b, 0xcc, 0xd4, 0x75,
 	}
+
 	if !bytes.Equal(sum, expected[:]) {
 		t.Fatalf("got %x, wanted %x", sum, expected)
 	}
@@ -295,31 +359,42 @@ func TestSelfTest(t *testing.T) {
 // Benchmarks
 
 func benchmarkSum(b *testing.B, size int, sse4, avx, avx2 bool) {
+	b.Helper()
+
 	// Enable the correct set of instructions
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
+
 	useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 
 	data := make([]byte, size)
+
 	b.SetBytes(int64(size))
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		Sum512(data)
 	}
 }
 
 func benchmarkWrite(b *testing.B, size int, sse4, avx, avx2 bool) {
+	b.Helper()
+
 	// Enable the correct set of instructions
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
+
 	useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 
 	data := make([]byte, size)
-	h, _ := New512(nil)
+	h, err := New512(nil)
+	require.NoError(b, err)
+
 	b.SetBytes(int64(size))
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		h.Write(data)
 	}

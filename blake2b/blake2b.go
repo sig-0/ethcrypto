@@ -54,25 +54,35 @@ var iv = [8]uint64{
 // Sum512 returns the BLAKE2b-512 checksum of the data.
 func Sum512(data []byte) [Size]byte {
 	var sum [Size]byte
+
 	checkSum(&sum, Size, data)
+
 	return sum
 }
 
 // Sum384 returns the BLAKE2b-384 checksum of the data.
 func Sum384(data []byte) [Size384]byte {
-	var sum [Size]byte
-	var sum384 [Size384]byte
+	var (
+		sum    [Size]byte
+		sum384 [Size384]byte
+	)
+
 	checkSum(&sum, Size384, data)
 	copy(sum384[:], sum[:Size384])
+
 	return sum384
 }
 
 // Sum256 returns the BLAKE2b-256 checksum of the data.
 func Sum256(data []byte) [Size256]byte {
-	var sum [Size]byte
-	var sum256 [Size256]byte
+	var (
+		sum    [Size]byte
+		sum256 [Size256]byte
+	)
+
 	checkSum(&sum, Size256, data)
 	copy(sum256[:], sum[:Size256])
+
 	return sum256
 }
 
@@ -104,9 +114,11 @@ func New(size int, key []byte) (hash.Hash, error) { return newDigest(size, key) 
 // parameter is modified by the function.
 func F(h *[8]uint64, m [16]uint64, c [2]uint64, final bool, rounds uint32) {
 	var flag uint64
+
 	if final {
 		flag = 0xFFFFFFFFFFFFFFFF
 	}
+
 	f(h, &m, c[0], c[1], flag, uint64(rounds))
 }
 
@@ -114,21 +126,26 @@ func newDigest(hashSize int, key []byte) (*digest, error) {
 	if hashSize < 1 || hashSize > Size {
 		return nil, errHashSize
 	}
+
 	if len(key) > Size {
 		return nil, errKeySize
 	}
+
 	d := &digest{
 		size:   hashSize,
 		keyLen: len(key),
 	}
+
 	copy(d.key[:], key)
 	d.Reset()
+
 	return d, nil
 }
 
 func checkSum(sum *[Size]byte, hashSize int, data []byte) {
 	h := iv
 	h[0] ^= uint64(hashSize) | (1 << 16) | (1 << 24)
+
 	var c [2]uint64
 
 	if length := len(data); length > BlockSize {
@@ -136,16 +153,20 @@ func checkSum(sum *[Size]byte, hashSize int, data []byte) {
 		if length == n {
 			n -= BlockSize
 		}
+
 		hashBlocks(&h, &c, 0, data[:n])
+
 		data = data[n:]
 	}
 
 	var block [BlockSize]byte
 	offset := copy(block[:], data)
 	remaining := uint64(BlockSize - offset)
+
 	if c[0] < remaining {
 		c[1]--
 	}
+
 	c[0] -= remaining
 
 	hashBlocks(&h, &c, 0xFFFFFFFFFFFFFFFF, block[:])
@@ -157,6 +178,7 @@ func checkSum(sum *[Size]byte, hashSize int, data []byte) {
 
 func hashBlocks(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte) {
 	var m [16]uint64
+
 	c0, c1 := c[0], c[1]
 
 	for i := 0; i < len(blocks); {
@@ -164,12 +186,15 @@ func hashBlocks(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte) {
 		if c0 < BlockSize {
 			c1++
 		}
+
 		for j := range m {
 			m[j] = binary.LittleEndian.Uint64(blocks[i:])
 			i += 8
 		}
+
 		f(h, &m, c0, c1, flag, 12)
 	}
+
 	c[0], c[1] = c0, c1
 }
 
@@ -193,17 +218,21 @@ func (d *digest) MarshalBinary() ([]byte, error) {
 	if d.keyLen != 0 {
 		return nil, errors.New("crypto/blake2b: cannot marshal MACs")
 	}
+
 	b := make([]byte, 0, marshaledSize)
 	b = append(b, magic...)
+
 	for i := 0; i < 8; i++ {
 		b = appendUint64(b, d.h[i])
 	}
+
 	b = appendUint64(b, d.c[0])
 	b = appendUint64(b, d.c[1])
 	// Maximum value for size is 64
 	b = append(b, byte(d.size))
 	b = append(b, d.block[:]...)
 	b = append(b, byte(d.offset))
+
 	return b, nil
 }
 
@@ -211,20 +240,27 @@ func (d *digest) UnmarshalBinary(b []byte) error {
 	if len(b) < len(magic) || string(b[:len(magic)]) != magic {
 		return errors.New("crypto/blake2b: invalid hash state identifier")
 	}
+
 	if len(b) != marshaledSize {
 		return errors.New("crypto/blake2b: invalid hash state size")
 	}
+
 	b = b[len(magic):]
+
 	for i := 0; i < 8; i++ {
 		b, d.h[i] = consumeUint64(b)
 	}
+
 	b, d.c[0] = consumeUint64(b)
 	b, d.c[1] = consumeUint64(b)
 	d.size = int(b[0])
 	b = b[1:]
+
 	copy(d.block[:], b[:BlockSize])
+
 	b = b[BlockSize:]
 	d.offset = int(b[0])
+
 	return nil
 }
 
@@ -236,23 +272,27 @@ func (d *digest) Reset() {
 	d.h = iv
 	d.h[0] ^= uint64(d.size) | (uint64(d.keyLen) << 8) | (1 << 16) | (1 << 24)
 	d.offset, d.c[0], d.c[1] = 0, 0, 0
+
 	if d.keyLen > 0 {
 		d.block = d.key
 		d.offset = BlockSize
 	}
 }
 
-func (d *digest) Write(p []byte) (n int, err error) {
-	n = len(p)
+func (d *digest) Write(p []byte) (int, error) {
+	n := len(p)
 
 	if d.offset > 0 {
 		remaining := BlockSize - d.offset
 		if n <= remaining {
 			d.offset += copy(d.block[d.offset:], p)
-			return
+
+			return n, nil
 		}
+
 		copy(d.block[d.offset:], p[:remaining])
 		hashBlocks(&d.h, &d.c, 0, d.block[:])
+
 		d.offset = 0
 		p = p[remaining:]
 	}
@@ -262,6 +302,7 @@ func (d *digest) Write(p []byte) (n int, err error) {
 		if length == nn {
 			nn -= BlockSize
 		}
+
 		hashBlocks(&d.h, &d.c, 0, p[:nn])
 		p = p[nn:]
 	}
@@ -270,17 +311,20 @@ func (d *digest) Write(p []byte) (n int, err error) {
 		d.offset += copy(d.block[:], p)
 	}
 
-	return
+	return n, nil
 }
 
 func (d *digest) Sum(sum []byte) []byte {
 	var hash [Size]byte
+
 	d.finalize(&hash)
+
 	return append(sum, hash[:d.size]...)
 }
 
 func (d *digest) finalize(hash *[Size]byte) {
 	var block [BlockSize]byte
+
 	copy(block[:], d.block[:d.offset])
 	remaining := uint64(BlockSize - d.offset)
 
@@ -288,6 +332,7 @@ func (d *digest) finalize(hash *[Size]byte) {
 	if c[0] < remaining {
 		c[1]--
 	}
+
 	c[0] -= remaining
 
 	h := d.h
@@ -300,22 +345,14 @@ func (d *digest) finalize(hash *[Size]byte) {
 
 func appendUint64(b []byte, x uint64) []byte {
 	var a [8]byte
-	binary.BigEndian.PutUint64(a[:], x)
-	return append(b, a[:]...)
-}
 
-func appendUint32(b []byte, x uint32) []byte {
-	var a [4]byte
-	binary.BigEndian.PutUint32(a[:], x)
+	binary.BigEndian.PutUint64(a[:], x)
+
 	return append(b, a[:]...)
 }
 
 func consumeUint64(b []byte) ([]byte, uint64) {
 	x := binary.BigEndian.Uint64(b)
-	return b[8:], x
-}
 
-func consumeUint32(b []byte) ([]byte, uint32) {
-	x := binary.BigEndian.Uint32(b)
-	return b[4:], x
+	return b[8:], x
 }
