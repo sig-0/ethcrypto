@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build amd64 && gc && !purego
+//go:build go1.7 && amd64 && !gccgo && !appengine
+// +build go1.7,amd64,!gccgo,!appengine
 
 package blake2b
 
@@ -15,23 +16,23 @@ func init() {
 }
 
 //go:noescape
-func hashBlocksAVX2(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte)
+func fAVX2(h *[8]uint64, m *[16]uint64, c0, c1 uint64, flag uint64, rounds uint64)
 
 //go:noescape
-func hashBlocksAVX(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte)
+func fAVX(h *[8]uint64, m *[16]uint64, c0, c1 uint64, flag uint64, rounds uint64)
 
 //go:noescape
-func hashBlocksSSE4(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte)
+func fSSE4(h *[8]uint64, m *[16]uint64, c0, c1 uint64, flag uint64, rounds uint64)
 
-func hashBlocks(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte) {
+func f(h *[8]uint64, m *[16]uint64, c0, c1 uint64, flag uint64, rounds uint64) {
 	switch {
 	case useAVX2:
-		hashBlocksAVX2(h, c, flag, blocks)
+		fAVX2(h, m, c0, c1, flag, rounds)
 	case useAVX:
-		hashBlocksAVX(h, c, flag, blocks)
+		fAVX(h, m, c0, c1, flag, rounds)
 	case useSSE4:
-		hashBlocksSSE4(h, c, flag, blocks)
+		fSSE4(h, m, c0, c1, flag, rounds)
 	default:
-		hashBlocksGeneric(h, c, flag, blocks)
+		fGeneric(h, m, c0, c1, flag, rounds)
 	}
 }

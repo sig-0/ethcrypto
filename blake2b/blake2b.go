@@ -98,6 +98,18 @@ func New256(key []byte) (hash.Hash, error) { return newDigest(Size256, key) }
 // and BinaryUnmarshaler for state (de)serialization as documented by hash.Hash.
 func New(size int, key []byte) (hash.Hash, error) { return newDigest(size, key) }
 
+// F is a compression function for BLAKE2b. It takes as an argument the state
+// vector `h`, message block vector `m`, offset counter `t`, final block indicator
+// flag `f`, and number of rounds `rounds`. The state vector provided as the first
+// parameter is modified by the function.
+func F(h *[8]uint64, m [16]uint64, c [2]uint64, final bool, rounds uint32) {
+	var flag uint64
+	if final {
+		flag = 0xFFFFFFFFFFFFFFFF
+	}
+	f(h, &m, c[0], c[1], flag, uint64(rounds))
+}
+
 func newDigest(hashSize int, key []byte) (*digest, error) {
 	if hashSize < 1 || hashSize > Size {
 		return nil, errHashSize
@@ -141,6 +153,24 @@ func checkSum(sum *[Size]byte, hashSize int, data []byte) {
 	for i, v := range h[:(hashSize+7)/8] {
 		binary.LittleEndian.PutUint64(sum[8*i:], v)
 	}
+}
+
+func hashBlocks(h *[8]uint64, c *[2]uint64, flag uint64, blocks []byte) {
+	var m [16]uint64
+	c0, c1 := c[0], c[1]
+
+	for i := 0; i < len(blocks); {
+		c0 += BlockSize
+		if c0 < BlockSize {
+			c1++
+		}
+		for j := range m {
+			m[j] = binary.LittleEndian.Uint64(blocks[i:])
+			i += 8
+		}
+		f(h, &m, c0, c1, flag, 12)
+	}
+	c[0], c[1] = c0, c1
 }
 
 type digest struct {
