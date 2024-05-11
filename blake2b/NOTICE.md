@@ -11,3 +11,5 @@ The fork retains the exact same license constraints and requirements as the orig
 From the [`go-ethereum/crypto/blake2b`](https://github.com/ethereum/go-ethereum/tree/master/crypto/blake2b)
 package, changes relating to [EIP-152](https://eips.ethereum.org/EIPS/eip-152), which change specific params
 of the library and add additional functionality.
+
+Linting changes applied as part of commit `6f8c31b9c11c491907ac14f397d86d586ee40699`.
