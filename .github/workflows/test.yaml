@@ -20,7 +20,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          slug: madz-lab/ethcrypto
+          slug: sig-0/ethcrypto
           files: coverage.out
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
