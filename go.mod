@@ -1,13 +1,13 @@
 module github.com/sig-0/ethcrypto
 
-go 1.22
+go 1.23
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/holiman/uint256 v1.3.2
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.31.0
-	golang.org/x/sys v0.28.0
+	golang.org/x/crypto v0.32.0
+	golang.org/x/sys v0.29.0
 )
 
 require (
