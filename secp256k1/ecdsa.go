@@ -2,6 +2,7 @@ package secp256k1
 
 import (
 	"errors"
+	"math/big"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
@@ -24,6 +25,37 @@ var (
 	ErrInvalidRValue = errors.New("invalid r signature value")
 	ErrInvalidSValue = errors.New("invalid s signature value")
 )
+
+// PrepareECRecover constructs the 128-byte payload expected by ECRecover.
+// It constructs a payload:
+//
+// - [0..31] bytes: the 32-byte message hash,
+//
+// - [32..63] bytes: v (as a 32-byte big-endian integer),
+//
+// - [64..95] bytes: r (as a 32-byte big-endian integer),
+//
+// - [96..127] bytes: s (as a 32-byte big-endian integer).
+func PrepareECRecover(messageHash ethtypes.Hash, v, r, s *big.Int) []byte {
+	payload := make([]byte, 128)
+
+	// Prepare the message hash
+	copy(payload[0:32], messageHash.ToBytes())
+
+	// Prepare the v param
+	vBytes := v.FillBytes(make([]byte, 32))
+	copy(payload[32:64], vBytes)
+
+	// Prepare the r param
+	rBytes := r.FillBytes(make([]byte, 32))
+	copy(payload[64:96], rBytes)
+
+	// Prepare the s param
+	sBytes := s.FillBytes(make([]byte, 32))
+	copy(payload[96:128], sBytes)
+
+	return payload
+}
 
 // ECRecover decrypts the signer address using the secp256k1 curve
 // recovery mechanism.
