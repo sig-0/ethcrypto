@@ -1,7 +1,5 @@
 package secp256k1
 
-import "golang.org/x/crypto/sha3"
-
 // rightPadZeroBytes returns a new right padded array of the specified size,
 // with the original contents of the buffer
 func rightPadZeroBytes(buffer []byte, size uint64) []byte {
@@ -30,14 +28,4 @@ func leftPadZeroBytes(buffer []byte, size uint64) []byte {
 	copy(padding[size-bufferSize:], buffer)
 
 	return padding
-}
-
-// keccakData keccaks the input data
-func keccakData(data ...[]byte) []byte {
-	hash := sha3.NewLegacyKeccak256()
-	for _, d := range data {
-		hash.Write(d)
-	}
-
-	return hash.Sum(nil)
 }
