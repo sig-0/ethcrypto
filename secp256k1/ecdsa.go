@@ -7,8 +7,7 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/holiman/uint256"
-	"github.com/sig-0/ethtypes"
-	"github.com/sig-0/ethtypes/keccak"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -36,11 +35,11 @@ var (
 // - [64..95] bytes: r (as a 32-byte big-endian integer),
 //
 // - [96..127] bytes: s (as a 32-byte big-endian integer).
-func PrepareECRecover(messageHash ethtypes.Hash, v, r, s *big.Int) []byte {
+func PrepareECRecover(messageHash []byte, v, r, s *big.Int) []byte {
 	payload := make([]byte, 128)
 
 	// Prepare the message hash
-	copy(payload[0:32], messageHash.ToBytes())
+	copy(payload[0:32], messageHash)
 
 	// Prepare the v param
 	vBytes := v.FillBytes(make([]byte, 32))
@@ -113,8 +112,11 @@ func ECRecover(payload []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Construct the address
-	address := keccak.New().Hash(publicKey)[12:]
+	// Construct the address (the last 20B of the public key keccak)
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write(publicKey)
+
+	address := hasher.Sum(nil)[12:]
 
 	// Pad the address
 	return leftPadZeroBytes(address, 32), nil
@@ -200,9 +202,9 @@ func secp256k1Recover(
 }
 
 // SignHash signs the given hash using the given private key
-func SignHash(privateKey *secp256k1.PrivateKey, hash ethtypes.Hash) []byte {
+func SignHash(privateKey *secp256k1.PrivateKey, hash []byte) []byte {
 	// Sign the hash using the private key
-	sig := ecdsa.SignCompact(privateKey, hash.ToBytes(), false)
+	sig := ecdsa.SignCompact(privateKey, hash, false)
 	privateKey.Zero()
 
 	// Convert the signature to the Ethereum sig format
