@@ -29,14 +29,10 @@ var (
 
 // PrepareECRecover constructs the 128-byte payload expected by ECRecover.
 // It constructs a payload:
-//
-// - [0..31] bytes: the 32-byte message hash,
-//
-// - [32..63] bytes: v (as a 32-byte big-endian integer),
-//
-// - [64..95] bytes: r (as a 32-byte big-endian integer),
-//
-// - [96..127] bytes: s (as a 32-byte big-endian integer).
+//   - [0..31] bytes: the 32-byte message hash,
+//   - [32..63] bytes: v (as a 32-byte big-endian integer),
+//   - [64..95] bytes: r (as a 32-byte big-endian integer),
+//   - [96..127] bytes: s (as a 32-byte big-endian integer).
 func PrepareECRecover(messageHash []byte, v, r, s *big.Int) []byte {
 	payload := make([]byte, 128)
 
@@ -83,8 +79,8 @@ func ECRecover(payload []byte) ([]byte, error) {
 		return nil, ErrInvalidVValue
 	}
 
-	// Normalize V to {0, 1, 27, 28}
-	vNormalized, err := normalizeV(vTerm)
+	// Normalize V to {27, 28}
+	vNormalized, err := NormalizeV(vTerm)
 	if err != nil {
 		return nil, err
 	}
@@ -120,10 +116,14 @@ func ECRecover(payload []byte) ([]byte, error) {
 	return leftPadZeroBytes(address, 32), nil
 }
 
-// normalizeV handles legacy (pre-EIP-155), EIP-155, and typed transaction v values.
+// NormalizeV handles legacy (pre-EIP-155), EIP-155, and typed transaction v values.
+//
+// Note: this function does not perform chain ID verification and matching. Make sure
+// this logic is done at some point before normalizing the V value, as the process works
+// with the embedded chain ID.
 //
 // Returns the final "recovery byte" in the range {27, 28}
-func normalizeV(vTerm uint64) (byte, error) {
+func NormalizeV(vTerm uint64) (byte, error) {
 	switch {
 	// Typed transactions (EIP-2930 / EIP-1559):
 	// v in {0, 1}
