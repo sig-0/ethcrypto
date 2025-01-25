@@ -15,8 +15,10 @@ const (
 )
 
 var (
-	zero       = uint256.NewInt(0)
-	secp256k1n = uint256.MustFromHex("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
+	zero           = uint256.NewInt(0)
+	one            = uint256.NewInt(1)
+	secp256k1n     = uint256.MustFromHex("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
+	secp256k1nHalf = uint256.NewInt(0).Div(secp256k1n, uint256.NewInt(2))
 )
 
 var (
@@ -60,14 +62,10 @@ func PrepareECRecover(messageHash []byte, v, r, s *big.Int) []byte {
 // recovery mechanism.
 //
 // The input data is expected to be 128 bytes:
-//
-// 0..31   => message hash
-//
-// 32..63  => v (padded)
-//
-// 64..95  => r
-//
-// 96..127 => s
+//   - 0..31   => message hash
+//   - 32..63  => v (padded)
+//   - 64..95  => r
+//   - 96..127 => s
 func ECRecover(payload []byte) ([]byte, error) {
 	// The input data needs to be exactly 128B long.
 	// We need to pad the input stream so there is no funny business
@@ -114,7 +112,7 @@ func ECRecover(payload []byte) ([]byte, error) {
 
 	// Construct the address (the last 20B of the public key keccak)
 	hasher := sha3.NewLegacyKeccak256()
-	hasher.Write(publicKey)
+	hasher.Write(publicKey) // TODO skip first byte?
 
 	address := hasher.Sum(nil)[12:]
 
@@ -124,13 +122,13 @@ func ECRecover(payload []byte) ([]byte, error) {
 
 // normalizeV handles legacy (pre-EIP-155), EIP-155, and typed transaction v values.
 //
-// Returns the final "recovery byte" in the range {0, 1, 27, 28}
+// Returns the final "recovery byte" in the range {27, 28}
 func normalizeV(vTerm uint64) (byte, error) {
 	switch {
 	// Typed transactions (EIP-2930 / EIP-1559):
 	// v in {0, 1}
 	case vTerm == 0 || vTerm == 1:
-		return byte(vTerm), nil
+		return byte(vTerm) + 27, nil
 
 	// Pre-EIP-155 transactions (legacy)
 	// v in {27, 28}
@@ -214,4 +212,43 @@ func SignHash(privateKey *secp256k1.PrivateKey, hash []byte) []byte {
 	sig[64] = v
 
 	return sig
+}
+
+// VerifySigValues verifies the V, R and S part of the Ethereum signatures.
+// Values it checks against:
+//   - R in range [1, secp256k1n)
+//   - S in range [1, secp256k1n) OR in range [1, secp256k1nHalf] if homestead
+//   - V either 0 or 1
+func VerifySigValues(V byte, R, S *big.Int, homesteadActive bool) error {
+	var (
+		r = uint256.NewInt(0).SetBytes(R.Bytes())
+		s = uint256.NewInt(0).SetBytes(S.Bytes())
+	)
+
+	// Check the R value.
+	// It needs to be in range [1, secp256k1n)
+	if zero.Cmp(r) >= 0 || r.Cmp(secp256k1n) >= 0 || r.Cmp(one) < 0 {
+		return ErrInvalidRValue
+	}
+
+	// Check the S value.
+	// It needs to be in range [1, secp256k1n)
+	if zero.Cmp(s) >= 0 || s.Cmp(secp256k1n) >= 0 || s.Cmp(one) < 0 {
+		return ErrInvalidSValue
+	}
+
+	// Perform the tighter check on the S param,
+	// if homestead is active.
+	// S needs to be in range [1, secp256k1nHalf]
+	if homesteadActive && s.Cmp(secp256k1nHalf) > 0 {
+		return ErrInvalidSValue
+	}
+
+	// Check the V value.
+	// It needs to be either 0 or 1 (parity)
+	if V != 0 && V != 1 {
+		return ErrInvalidVValue
+	}
+
+	return nil
 }
