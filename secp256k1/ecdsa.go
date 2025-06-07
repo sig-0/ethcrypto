@@ -307,3 +307,23 @@ func RecoverSigner(msg, sig []byte, homestead bool) ([20]byte, error) {
 
 	return zeroAddr, nil
 }
+
+// PubKeyToAddress derives the Ethereum address from the given public key
+func PubKeyToAddress(pk *secp256k1.PublicKey) [20]byte {
+	var (
+		uncompressed = pk.SerializeUncompressed()
+		pubBytes     = uncompressed[1:] // drop the 0x04
+	)
+
+	// Keccak the pubkey
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write(pubBytes)
+	hash := hasher.Sum(nil)
+
+	// The address is the lower 20B of the hash
+	var addr [20]byte
+
+	copy(addr[:], hash[12:])
+
+	return addr
+}

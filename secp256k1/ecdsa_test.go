@@ -2,6 +2,8 @@ package secp256k1
 
 import (
 	"crypto/rand"
+	"encoding/hex"
+	"strings"
 	"testing"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -53,4 +55,57 @@ func TestECDSA_RecoverSigner(t *testing.T) {
 		// Make sure the address matches
 		assert.Equal(t, pubKeyToAddr(priv.PubKey()), recoveredAddr)
 	})
+}
+
+func TestECDSA_PubKeyToAddress(t *testing.T) {
+	t.Parallel()
+
+	stringToAddress := func(addr string) [20]byte {
+		b, err := hex.DecodeString(strings.TrimPrefix(addr, "0x"))
+		require.NoError(t, err)
+
+		var address [20]byte
+
+		copy(address[:], b)
+
+		return address
+	}
+
+	pubkeyFromHex := func(privHex string) *secp256k1.PublicKey {
+		d, err := hex.DecodeString(privHex)
+		require.NoError(t, err)
+
+		return secp256k1.PrivKeyFromBytes(d).PubKey()
+	}
+
+	testTable := []struct {
+		name            string
+		privKey         string
+		expectedAddress [20]byte
+	}{
+		{
+			"0x4c9EfA80F5AE903E1be5A5FD36747F52Af82BbaB",
+			"4c0883a69102937d6231471b5dbb6204fe512961708279ea7a1276c0e5be223e",
+			stringToAddress("0x4c9EfA80F5AE903E1be5A5FD36747F52Af82BbaB"),
+		},
+		{
+			"0xFCAd0B19bB29D4674531d6f115237E16AfCE377c",
+			"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			stringToAddress("0xFCAd0B19bB29D4674531d6f115237E16AfCE377c"),
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Parse the key
+			pubKey := pubkeyFromHex(testCase.privKey)
+
+			// Derive the address
+			address := PubKeyToAddress(pubKey)
+
+			assert.Equal(t, testCase.expectedAddress, address)
+		})
+	}
 }
