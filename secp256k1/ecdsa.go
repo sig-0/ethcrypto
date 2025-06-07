@@ -2,6 +2,7 @@ package secp256k1
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -12,6 +13,7 @@ import (
 
 const (
 	ecrecoverDataLength = 128 // 4 * 32B (hash, v, r, s)
+	signatureSize       = 65  // bytes
 )
 
 var (
@@ -22,9 +24,10 @@ var (
 )
 
 var (
-	ErrInvalidVValue = errors.New("invalid v signature value")
-	ErrInvalidRValue = errors.New("invalid r signature value")
-	ErrInvalidSValue = errors.New("invalid s signature value")
+	ErrInvalidVValue  = errors.New("invalid v signature value")
+	ErrInvalidRValue  = errors.New("invalid r signature value")
+	ErrInvalidSValue  = errors.New("invalid s signature value")
+	ErrInvalidSigSize = errors.New("invalid signature size")
 )
 
 // PrepareECRecover constructs the 128-byte payload expected by ECRecover.
@@ -108,7 +111,7 @@ func ECRecover(payload []byte) ([]byte, error) {
 
 	// Construct the address (the last 20B of the public key keccak)
 	hasher := sha3.NewLegacyKeccak256()
-	hasher.Write(publicKey) // TODO skip first byte?
+	hasher.Write(publicKey)
 
 	address := hasher.Sum(nil)[12:]
 
@@ -177,7 +180,7 @@ func secp256k1Recover(
 	messageHash []byte,
 ) ([]byte, error) {
 	// The signature is always 65B long
-	signature := make([]byte, 65)
+	signature := make([]byte, signatureSize)
 
 	// Set the V value as the first byte
 	// (the crypto lib used expects this for recovery)
@@ -203,7 +206,6 @@ func secp256k1Recover(
 func SignHash(privateKey *secp256k1.PrivateKey, hash []byte) []byte {
 	// Sign the hash using the private key
 	sig := ecdsa.SignCompact(privateKey, hash, false)
-	privateKey.Zero()
 
 	// Convert the signature to the Ethereum sig format
 	// with v being at the end
@@ -251,4 +253,57 @@ func VerifySigValues(V byte, R, S *big.Int, homesteadActive bool) error {
 	}
 
 	return nil
+}
+
+// RecoverSigner returns the Ethereum address (20 bytes) that created
+// the signature over message. Set homestead to true for the latest hardfork rules
+func RecoverSigner(msg, sig []byte, homestead bool) ([20]byte, error) {
+	var zeroAddr [20]byte
+
+	if len(sig) != signatureSize {
+		return zeroAddr, ErrInvalidSigSize
+	}
+
+	// Split the 65B signature
+	// R || S || V
+	var (
+		r    = big.NewInt(0).SetBytes(sig[0:32])
+		s    = big.NewInt(0).SetBytes(sig[32:64])
+		vRaw = uint64(sig[64])
+	)
+
+	// Normalize V to {27, 28}
+	vNorm, err := NormalizeV(vRaw)
+	if err != nil {
+		return zeroAddr, fmt.Errorf("invalid V value: %w", err)
+	}
+	vParity := vNorm - 27 // 0 or 1
+
+	// Make sure the signature values are valid
+	if err = VerifySigValues(vParity, r, s, homestead); err != nil {
+		return zeroAddr, fmt.Errorf("unable to verify VRS values: %w", err)
+	}
+
+	// Keccak the message
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write(msg)
+	hash := hasher.Sum(nil)
+
+	// Prepare the ECRecover payload
+	payload := PrepareECRecover(
+		hash,
+		new(big.Int).SetUint64(vRaw),
+		r,
+		s,
+	)
+
+	// Recover the signer
+	raw, err := ECRecover(payload)
+	if err != nil {
+		return zeroAddr, fmt.Errorf("unable to recover signer: %w", err)
+	}
+
+	copy(zeroAddr[:], raw[12:]) // ECRecover pads to 32B; keep the right-most 20
+
+	return zeroAddr, nil
 }
