@@ -7,8 +7,6 @@ import (
 )
 
 func TestF(t *testing.T) {
-	t.Parallel()
-
 	type testVector struct {
 		name string
 
@@ -50,11 +48,7 @@ func TestF(t *testing.T) {
 	}
 
 	for _, testCase := range testVectorsF {
-		testCase := testCase
-
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			h := testCase.hIn
 			F(&h, testCase.m, testCase.c, testCase.f, testCase.rounds)
 

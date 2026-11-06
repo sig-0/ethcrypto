@@ -10,8 +10,6 @@ import (
 )
 
 func TestG1Marshal(t *testing.T) {
-	t.Parallel()
-
 	_, Ga, err := RandomG1(rand.Reader)
 	require.NoError(t, err)
 
@@ -27,8 +25,6 @@ func TestG1Marshal(t *testing.T) {
 }
 
 func TestG2Marshal(t *testing.T) {
-	t.Parallel()
-
 	_, Ga, err := RandomG2(rand.Reader)
 	require.NoError(t, err)
 
@@ -44,8 +40,6 @@ func TestG2Marshal(t *testing.T) {
 }
 
 func TestBilinearity(t *testing.T) {
-	t.Parallel()
-
 	for i := 0; i < 2; i++ {
 		a, p1, err := RandomG1(rand.Reader)
 		require.NoError(t, err)
@@ -66,8 +60,6 @@ func TestBilinearity(t *testing.T) {
 }
 
 func TestTripartiteDiffieHellman(t *testing.T) {
-	t.Parallel()
-
 	a, err := rand.Int(rand.Reader, Order)
 	require.NoError(t, err)
 
@@ -116,8 +108,6 @@ func TestTripartiteDiffieHellman(t *testing.T) {
 }
 
 func TestG2SelfAddition(t *testing.T) {
-	t.Parallel()
-
 	s, err := rand.Int(rand.Reader, Order)
 	require.NoError(t, err)
 
@@ -134,8 +124,6 @@ func TestG2SelfAddition(t *testing.T) {
 }
 
 func TestRandomG2Marshal(t *testing.T) {
-	t.Parallel()
-
 	for i := 0; i < 10; i++ {
 		n, g2, err := RandomG2(rand.Reader)
 		if err != nil {
@@ -149,8 +137,6 @@ func TestRandomG2Marshal(t *testing.T) {
 }
 
 func TestPairings(t *testing.T) {
-	t.Parallel()
-
 	a1 := new(G1).ScalarBaseMult(bigFromBase10("1"))
 	a2 := new(G1).ScalarBaseMult(bigFromBase10("2"))
 	a37 := new(G1).ScalarBaseMult(bigFromBase10("37"))

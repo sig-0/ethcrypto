@@ -8,8 +8,6 @@ import (
 )
 
 func TestLatticeReduceCurve(t *testing.T) {
-	t.Parallel()
-
 	k, err := rand.Int(rand.Reader, Order)
 	require.NoError(t, err)
 
@@ -23,8 +21,6 @@ func TestLatticeReduceCurve(t *testing.T) {
 }
 
 func TestLatticeReduceTarget(t *testing.T) {
-	t.Parallel()
-
 	k, err := rand.Int(rand.Reader, Order)
 	require.NoError(t, err)
 

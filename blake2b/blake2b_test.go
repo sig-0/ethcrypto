@@ -18,8 +18,6 @@ import (
 )
 
 func TestHashes(t *testing.T) {
-	t.Parallel()
-
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
@@ -50,8 +48,6 @@ func TestHashes(t *testing.T) {
 }
 
 func TestHashes2X(t *testing.T) {
-	t.Parallel()
-
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)
@@ -82,8 +78,6 @@ func TestHashes2X(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	t.Parallel()
-
 	input := make([]byte, 255)
 	for i := range input {
 		input[i] = byte(i)
@@ -319,8 +313,6 @@ func computeHash(msg []byte, hashSize int) []byte {
 
 // Test function from RFC 7693.
 func TestSelfTest(t *testing.T) {
-	t.Parallel()
-
 	hashLens := [4]int{20, 32, 48, 64}
 	msgLens := [6]int{0, 3, 128, 129, 255, 1024}
 

@@ -12,8 +12,6 @@ import (
 )
 
 func TestExamplePair(t *testing.T) {
-	t.Parallel()
-
 	// This implements the tripartite Diffie-Hellman algorithm from "A One
 	// Round Protocol for Tripartite Diffie-Hellman", A. Joux.
 	// http://www.springerlink.com/content/cddc57yyva0hburb/fulltext.pdf
