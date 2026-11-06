@@ -221,10 +221,10 @@ func SignHash(privateKey *secp256k1.PrivateKey, hash []byte) []byte {
 //   - R in range [1, secp256k1n)
 //   - S in range [1, secp256k1n) OR in range [1, secp256k1nHalf] if homestead
 //   - V either 0 or 1
-func VerifySigValues(V byte, R, S *big.Int, homesteadActive bool) error {
+func VerifySigValues(v byte, rBig, sBig *big.Int, homesteadActive bool) error {
 	var (
-		r = uint256.NewInt(0).SetBytes(R.Bytes())
-		s = uint256.NewInt(0).SetBytes(S.Bytes())
+		r = uint256.NewInt(0).SetBytes(rBig.Bytes())
+		s = uint256.NewInt(0).SetBytes(sBig.Bytes())
 	)
 
 	// Check the R value.
@@ -248,7 +248,7 @@ func VerifySigValues(V byte, R, S *big.Int, homesteadActive bool) error {
 
 	// Check the V value.
 	// It needs to be either 0 or 1 (parity)
-	if V != 0 && V != 1 {
+	if v != 0 && v != 1 {
 		return ErrInvalidVValue
 	}
 
@@ -277,6 +277,7 @@ func RecoverSigner(msg, sig []byte, homestead bool) ([20]byte, error) {
 	if err != nil {
 		return zeroAddr, fmt.Errorf("invalid V value: %w", err)
 	}
+
 	vParity := vNorm - 27 // 0 or 1
 
 	// Make sure the signature values are valid
